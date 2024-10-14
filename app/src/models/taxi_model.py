@@ -1,4 +1,4 @@
-from app import db
+from app.base_de_datos.sql import db
 
 class Taxi(db.Model):
     """"
