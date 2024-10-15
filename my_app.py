@@ -95,6 +95,46 @@ def get_trajectories() :
     
     return jsonify([trajectory.to_dict() for trajectory in trajectories])
 
+bp_route_latest = Blueprint('bp_route_latest', __name__)
+
+@bp_route_latest.route('/trajectories/latest', methods=['GET'])
+def get_latest_trajectories():
+
+    # Subconsulta que obtiene la última trayectoria por taxi_id
+    subquery = db.session.query(
+        Trajectory.taxi_id,
+        #func max (funcion de sql) .label(renombra el resultado de una función)
+        func.max(Trajectory.date).label('latest_trajectories') 
+        #group_by (agrupa los resultados de cada taxi con su ultima trayectoria)
+    ).group_by(Trajectory.taxi_id).subquery()
+
+    last_trajectories = db.session.query(
+        Taxi.id,
+        Taxi.plate,
+        Trajectory.date,
+        Trajectory.latitude,
+        Trajectory.longitude
+    ).join(Trajectory, Taxi.id == Trajectory.taxi_id)\
+    .filter(Trajectory.taxi_id == subquery.c.taxi_id)\
+    .filter(Trajectory.date == subquery.c.latest_trajectories).distinct()\
+    .all()
+
+    if not last_trajectories:
+        return jsonify({ "error": "Ultimas rutas no encontradas" }), 404
+
+    dict_latest_trajectories = []
+    for trajectory in last_trajectories:
+        dict_latest_trajectories.append({
+            'id': trajectory.id,  # Aquí añades la propiedad 'id'
+            'taxiId': trajectory.id,              # Taxi ID
+            'plate': trajectory.plate,            # Placa del taxi
+            'date': trajectory.date,         # Fecha de la última trayectoria
+            'latitude': trajectory.latitude,      # Latitud
+            'longitude': trajectory.longitude     # Longitud
+        })
+
+    return jsonify(dict_latest_trajectories), 200
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)  
@@ -103,6 +143,7 @@ def create_app():
     app.register_blueprint(bp_route_home)
     app.register_blueprint(bp_route_taxis)
     app.register_blueprint(bp_route_trajectories)
+    app.register_blueprint(bp_route_latest)
 
     @app.route("/")
     def hello_world():
