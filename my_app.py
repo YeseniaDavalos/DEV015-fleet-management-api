@@ -109,15 +109,16 @@ def get_latest_trajectories():
     ).group_by(Trajectory.taxi_id).subquery()
 
     last_trajectories = db.session.query(
-        Taxi.id,
-        Taxi.plate,
-        Trajectory.date,
-        Trajectory.latitude,
-        Trajectory.longitude
-    ).join(Trajectory, Taxi.id == Trajectory.taxi_id)\
-    .filter(Trajectory.taxi_id == subquery.c.taxi_id)\
-    .filter(Trajectory.date == subquery.c.latest_trajectories).distinct()\
-    .all()
+    Taxi.id,
+    Taxi.plate,
+    Trajectory.date,
+    Trajectory.latitude,
+    Trajectory.longitude
+).join(Trajectory, Taxi.id == Trajectory.taxi_id)\
+.filter(Trajectory.taxi_id == subquery.c.taxi_id)\
+.filter(Trajectory.date == subquery.c.latest_trajectories)\
+.distinct().all()
+
 
     if not last_trajectories:
         return jsonify({ "error": "Ultimas rutas no encontradas" }), 404
@@ -145,9 +146,7 @@ def create_app():
     app.register_blueprint(bp_route_trajectories)
     app.register_blueprint(bp_route_latest)
 
-    @app.route("/")
-    def hello_world():
-        return "<p>Hello, World!</p>"
+
 
     return app
 
